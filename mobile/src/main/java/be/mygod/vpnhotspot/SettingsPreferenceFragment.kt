@@ -8,16 +8,24 @@ import android.os.Bundle
 import android.support.customtabs.CustomTabsIntent
 import android.support.v4.content.ContextCompat
 import android.support.v4.content.FileProvider
+import android.support.v7.preference.Preference
 import android.widget.Toast
 import be.mygod.vpnhotspot.App.Companion.app
 import be.mygod.vpnhotspot.net.Routing
+import be.mygod.vpnhotspot.net.UpstreamMonitor
+import be.mygod.vpnhotspot.preference.AlwaysAutoCompleteEditTextPreferenceDialogFragmentCompat
+import be.mygod.vpnhotspot.preference.SharedPreferenceDataStore
 import be.mygod.vpnhotspot.util.loggerSuStream
-import com.takisoft.fix.support.v7.preference.PreferenceFragmentCompatDividers
+import be.mygod.vpnhotspot.util.put
+import com.crashlytics.android.Crashlytics
+import com.takisoft.fix.support.v7.preference.PreferenceFragmentCompat
 import java.io.File
 import java.io.IOException
 import java.io.PrintWriter
+import java.net.NetworkInterface
+import java.net.SocketException
 
-class SettingsPreferenceFragment : PreferenceFragmentCompatDividers() {
+class SettingsPreferenceFragment : PreferenceFragmentCompat() {
     private val customTabsIntent by lazy {
         CustomTabsIntent.Builder()
                 .setToolbarColor(ContextCompat.getColor(requireContext(), R.color.colorPrimary))
@@ -46,6 +54,7 @@ class SettingsPreferenceFragment : PreferenceFragmentCompatDividers() {
                         Runtime.getRuntime().exec(arrayOf("logcat", "-d")).inputStream.use { it.copyTo(out) }
                     } catch (e: IOException) {
                         e.printStackTrace(writer)
+                        Crashlytics.logException(e)
                     }
                     writer.write("\n")
                     writer.flush()
@@ -75,6 +84,7 @@ class SettingsPreferenceFragment : PreferenceFragmentCompatDividers() {
                         loggerSuStream(commands.toString())?.use { it.copyTo(out) }
                     } catch (e: IOException) {
                         e.printStackTrace(writer)
+                        Crashlytics.logException(e)
                         writer.flush()
                     }
                 }
@@ -91,5 +101,21 @@ class SettingsPreferenceFragment : PreferenceFragmentCompatDividers() {
             customTabsIntent.launchUrl(activity, Uri.parse("https://github.com/Mygod/VPNHotspot"))
             true
         }
+    }
+
+    override fun onDisplayPreferenceDialog(preference: Preference) = when (preference.key) {
+        UpstreamMonitor.KEY -> displayPreferenceDialog(
+                AlwaysAutoCompleteEditTextPreferenceDialogFragmentCompat(), UpstreamMonitor.KEY,
+                Bundle().put(AlwaysAutoCompleteEditTextPreferenceDialogFragmentCompat.KEY_SUGGESTIONS,
+                        try {
+                            NetworkInterface.getNetworkInterfaces().asSequence()
+                                    .filter { it.isUp && !it.isLoopback && it.interfaceAddresses.isNotEmpty() }
+                                    .map { it.name }.sorted().toList().toTypedArray()
+                        } catch (e: SocketException) {
+                            e.printStackTrace()
+                            Crashlytics.logException(e)
+                            emptyArray<String>()
+                        }))
+        else -> super.onDisplayPreferenceDialog(preference)
     }
 }

@@ -12,10 +12,9 @@
     <string name="app_name">VPN Hotspot</string>
     <string name="title_repeater">Repeater</string>
     <string name="title_tethering">Tethering</string>
+    <string name="title_clients">Clients</string>
     <string name="title_settings">Settings</string>
-    <string name="service_inactive">Service inactive</string>
 
-    <string name="repeater_addresses">Addresses</string>
     <string name="repeater_wps">WPS</string>
     <string name="repeater_wps_dialog_title">Enter PIN</string>
     <string name="repeater_wps_dialog_pbc">Push Button</string>
@@ -29,7 +28,7 @@
     <string name="repeater_reset_credentials_success">Credentials reset.</string>
     <string name="repeater_reset_credentials_failure">Failed to reset credentials (reason: %s)</string>
 
-    <string name="repeater_p2p_unavailable">Wi\u2011Fi direct unavailable</string>
+    <string name="repeater_p2p_unavailable">Wi\u2011Fi direct unavailable, please enable Wi\u2011Fi</string>
     <string name="repeater_create_group_failure">Failed to create P2P group (reason: %s)</string>
     <string name="repeater_remove_group_failure">Failed to remove P2P group (reason: %s)</string>
     <string name="repeater_remove_old_group_failure">Failed to remove old P2P group (reason: %s)</string>
@@ -41,6 +40,7 @@
     <string name="repeater_failure_reason_no_service_requests">no service requests added</string>
 
     <string name="tethering_temp_hotspot">Temporary Wi\u2011Fi hotspot</string>
+    <string name="tethering_temp_hotspot_location">Temporary hotspot requires location to be turned on.</string>
     <string name="tethering_temp_hotspot_failure">Failed to start hotspot (reason: %s)</string>
     <string name="tethering_temp_hotspot_failure_no_channel">no channel</string>
     <string name="tethering_temp_hotspot_failure_generic">generic error</string>
@@ -54,7 +54,6 @@
     <string name="tethering_manage_bluetooth">Bluetooth tethering</string>
     <string name="tethering_manage_failed">Android system has failed to start tethering.</string>
 
-    <string name="connected_devices">Connected devices</string>
     <string name="connected_state_incomplete">%s (connecting)</string>
     <string name="connected_state_valid">%s (reachable)</string>
     <string name="connected_state_failed">%s (lost)</string>
@@ -63,9 +62,13 @@
     <string name="settings_service_repeater_oc">Operating Wi\u2011Fi channel (unstable)</string>
     <string name="settings_service_repeater_oc_summary">Auto (1\u201114 = 2.4GHz, 15\u2011165 = 5GHz)</string>
     <string name="settings_service_repeater_strict">Strict mode</string>
-    <string name="settings_service_repeater_strict_summary">Only allow packets that goes through VPN tunnel, also
-        applies to temporary Wi\u2011Fi hotspot.</string>
+    <string name="settings_service_repeater_strict_summary">Only allow packets that goes through VPN tunnel. Does not
+        apply to system tethering.</string>
+    <string name="settings_service_disable_ipv6">Disable IPv6 tethering</string>
+    <string name="settings_service_disable_ipv6_summary">Enabling this option will prevent VPN leaks via IPv6.</string>
     <string name="settings_service_dns">Fallback DNS server[:port]</string>
+    <string name="settings_service_upstream">Upstream network interface</string>
+    <string name="settings_service_upstream_auto">Auto detect system VPN</string>
     <string name="settings_service_clean">Clean/reapply routing rules</string>
     <string name="settings_misc">Misc</string>
     <string name="settings_misc_logcat">Export debug information</string>

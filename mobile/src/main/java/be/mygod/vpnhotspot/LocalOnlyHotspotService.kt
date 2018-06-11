@@ -6,10 +6,12 @@ import android.net.wifi.WifiManager
 import android.support.annotation.RequiresApi
 import android.widget.Toast
 import be.mygod.vpnhotspot.App.Companion.app
+import be.mygod.vpnhotspot.manage.LocalOnlyHotspotManager
 import be.mygod.vpnhotspot.net.IpNeighbourMonitor
 import be.mygod.vpnhotspot.net.TetheringManager
 import be.mygod.vpnhotspot.util.broadcastReceiver
 import be.mygod.vpnhotspot.util.debugLog
+import com.crashlytics.android.Crashlytics
 
 @RequiresApi(26)
 class LocalOnlyHotspotService : IpNeighbourMonitoringService() {
@@ -18,12 +20,13 @@ class LocalOnlyHotspotService : IpNeighbourMonitoringService() {
     }
 
     inner class Binder : android.os.Binder() {
-        var fragment: TetheringFragment? = null
+        var manager: LocalOnlyHotspotManager? = null
         var iface: String? = null
         val configuration get() = reservation?.wifiConfiguration
 
         fun stop() = reservation?.close()
     }
+    private class StartFailure(message: String) : RuntimeException(message)
 
     private val binder = Binder()
     private var reservation: WifiManager.LocalOnlyHotspotReservation? = null
@@ -36,8 +39,6 @@ class LocalOnlyHotspotService : IpNeighbourMonitoringService() {
         val iface = ifaces.singleOrNull()
         binder.iface = iface
         if (iface == null) {
-            routingManager?.stop()
-            routingManager = null
             unregisterReceiver()
             ServiceNotification.stopForeground(this)
             stopSelf()
@@ -48,7 +49,7 @@ class LocalOnlyHotspotService : IpNeighbourMonitoringService() {
                 IpNeighbourMonitor.registerCallback(this)
             } else check(iface == routingManager.downstream)
         }
-        app.handler.post { binder.fragment?.adapter?.updateLocalOnlyViewHolder() }
+        app.handler.post { binder.manager?.update() }
     }
     override val activeIfaces get() = listOfNotNull(binder.iface)
 
@@ -76,7 +77,7 @@ class LocalOnlyHotspotService : IpNeighbourMonitoringService() {
                 }
 
                 override fun onFailed(reason: Int) {
-                    Toast.makeText(this@LocalOnlyHotspotService, getString(R.string.tethering_temp_hotspot_failure,
+                    val message = getString(R.string.tethering_temp_hotspot_failure,
                             when (reason) {
                                 WifiManager.LocalOnlyHotspotCallback.ERROR_NO_CHANNEL ->
                                     getString(R.string.tethering_temp_hotspot_failure_no_channel)
@@ -87,11 +88,20 @@ class LocalOnlyHotspotService : IpNeighbourMonitoringService() {
                                 WifiManager.LocalOnlyHotspotCallback.ERROR_TETHERING_DISALLOWED ->
                                     getString(R.string.tethering_temp_hotspot_failure_tethering_disallowed)
                                 else -> getString(R.string.failure_reason_unknown, reason)
-                            }), Toast.LENGTH_SHORT).show()
+                            })
+                    Toast.makeText(this@LocalOnlyHotspotService, message, Toast.LENGTH_SHORT).show()
+                    Crashlytics.logException(StartFailure(message))
+                    updateNotification()
+                    ServiceNotification.stopForeground(this@LocalOnlyHotspotService)
                 }
             }, app.handler)
         } catch (e: IllegalStateException) {
             e.printStackTrace()
+            Crashlytics.logException(e)
+        } catch (e: SecurityException) {
+            Toast.makeText(this, e.message, Toast.LENGTH_LONG).show()
+            e.printStackTrace()
+            Crashlytics.logException(e)
         }
         return START_STICKY
     }
@@ -102,6 +112,8 @@ class LocalOnlyHotspotService : IpNeighbourMonitoringService() {
     }
 
     private fun unregisterReceiver() {
+        routingManager?.stop()
+        routingManager = null
         if (receiverRegistered) {
             unregisterReceiver(receiver)
             IpNeighbourMonitor.unregisterCallback(this)

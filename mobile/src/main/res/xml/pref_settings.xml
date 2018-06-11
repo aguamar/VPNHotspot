@@ -1,38 +1,45 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
     <PreferenceCategory
-        android:title="@string/title_repeater">
-        <AutoSummaryEditTextPreference
-            android:key="service.repeater.oc"
-            android:title="@string/settings_service_repeater_oc"
-            android:summary="@string/settings_service_repeater_oc_summary"
-            android:hint="@string/settings_service_repeater_oc_summary"
-            android:inputType="number"
-            android:maxLength="3"/>
+        android:title="@string/settings_service">
+        <Preference
+            android:key="service.clean"
+            android:icon="@drawable/ic_action_settings_backup_restore"
+            android:title="@string/settings_service_clean"/>
         <SwitchPreference
             android:key="service.repeater.strict"
+            android:icon="@drawable/ic_action_pan_tool"
             android:title="@string/settings_service_repeater_strict"
             android:summary="@string/settings_service_repeater_strict_summary"/>
-    </PreferenceCategory>
-    <PreferenceCategory
-        android:title="@string/settings_service">
+        <SwitchPreference
+            android:key="service.disableIpv6"
+            android:icon="@drawable/ic_image_looks_6"
+            android:title="@string/settings_service_disable_ipv6"
+            android:summary="@string/settings_service_disable_ipv6_summary"/>
         <AutoSummaryEditTextPreference
             android:key="service.dns"
+            android:icon="@drawable/ic_action_dns"
             android:title="@string/settings_service_dns"
             android:singleLine="true"
             android:defaultValue="8.8.8.8"/>
-        <Preference
-            android:key="service.clean"
-            android:title="@string/settings_service_clean"/>
+        <be.mygod.vpnhotspot.preference.AlwaysAutoCompleteEditTextPreference
+            android:key="service.upstream"
+            android:icon="@drawable/ic_action_settings_ethernet"
+            android:title="@string/settings_service_upstream"
+            android:summary="@string/settings_service_upstream_auto"
+            android:hint="@string/settings_service_upstream_auto"
+            android:singleLine="true"/>
     </PreferenceCategory>
     <PreferenceCategory
         android:title="@string/settings_misc">
         <Preference
             android:key="misc.logcat"
+            android:icon="@drawable/ic_action_bug_report"
             android:title="@string/settings_misc_logcat"
             android:summary="@string/settings_misc_logcat_summary"/>
         <Preference
             android:key="misc.source"
+            android:icon="@drawable/ic_toggle_star"
             android:title="@string/settings_misc_source"
             android:summary="@string/settings_misc_source_summary"/>
     </PreferenceCategory>

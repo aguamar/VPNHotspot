@@ -21,6 +21,7 @@ import be.mygod.vpnhotspot.net.wifi.WifiP2pManagerHelper.requestPersistentGroupI
 import be.mygod.vpnhotspot.net.wifi.WifiP2pManagerHelper.setWifiP2pChannels
 import be.mygod.vpnhotspot.net.wifi.WifiP2pManagerHelper.startWps
 import be.mygod.vpnhotspot.util.*
+import com.crashlytics.android.Crashlytics
 import java.lang.reflect.InvocationTargetException
 import java.net.InetAddress
 
@@ -32,6 +33,7 @@ class RepeaterService : Service(), WifiP2pManager.ChannelListener, SharedPrefere
     enum class Status {
         IDLE, STARTING, ACTIVE
     }
+    private class Failure(message: String) : RuntimeException(message)
 
     inner class Binder : android.os.Binder() {
         val service get() = this@RepeaterService
@@ -79,6 +81,7 @@ class RepeaterService : Service(), WifiP2pManager.ChannelListener, SharedPrefere
                 })
             } catch (e: ReflectiveOperationException) {
                 e.printStackTrace()
+                Crashlytics.logException(e)
                 Toast.makeText(this@RepeaterService, e.message, Toast.LENGTH_LONG).show()
             }
         }
@@ -113,22 +116,27 @@ class RepeaterService : Service(), WifiP2pManager.ChannelListener, SharedPrefere
             binder.statusChanged()
         }
 
-    private fun formatReason(@StringRes resId: Int, reason: Int) = getString(resId, when (reason) {
-        WifiP2pManager.ERROR -> getString(R.string.repeater_failure_reason_error)
-        WifiP2pManager.P2P_UNSUPPORTED -> getString(R.string.repeater_failure_reason_p2p_unsupported)
-        WifiP2pManager.BUSY -> getString(R.string.repeater_failure_reason_busy)
-        WifiP2pManager.NO_SERVICE_REQUESTS -> getString(R.string.repeater_failure_reason_no_service_requests)
-        else -> getString(R.string.failure_reason_unknown, reason)
-    })
+    private fun formatReason(@StringRes resId: Int, reason: Int): String? {
+        val result = getString(resId, when (reason) {
+            WifiP2pManager.ERROR -> getString(R.string.repeater_failure_reason_error)
+            WifiP2pManager.P2P_UNSUPPORTED -> getString(R.string.repeater_failure_reason_p2p_unsupported)
+            WifiP2pManager.BUSY -> getString(R.string.repeater_failure_reason_busy)
+            WifiP2pManager.NO_SERVICE_REQUESTS -> getString(R.string.repeater_failure_reason_no_service_requests)
+            else -> getString(R.string.failure_reason_unknown, reason)
+        })
+        Crashlytics.logException(Failure(result))
+        return result
+    }
 
     override fun onCreate() {
         super.onCreate()
         try {
-            p2pManager = getSystemService(Context.WIFI_P2P_SERVICE) as WifiP2pManager
+            p2pManager = systemService()
             onChannelDisconnected()
             app.pref.registerOnSharedPreferenceChangeListener(this)
-        } catch (exc: TypeCastException) {
+        } catch (exc: KotlinNullPointerException) {
             exc.printStackTrace()
+            Crashlytics.logException(exc)
         }
     }
 
@@ -144,9 +152,13 @@ class RepeaterService : Service(), WifiP2pManager.ChannelListener, SharedPrefere
             }
         })
     } catch (e: InvocationTargetException) {
-        if (oc != 0)
-            Toast.makeText(this, getString(R.string.repeater_set_oc_failure, e.message), Toast.LENGTH_SHORT).show()
+        if (oc != 0) {
+            val message = getString(R.string.repeater_set_oc_failure, e.message)
+            Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+            Crashlytics.logException(Failure(message))
+        }
         e.printStackTrace()
+        Crashlytics.logException(e)
     }
 
     override fun onChannelDisconnected() {
@@ -177,9 +189,9 @@ class RepeaterService : Service(), WifiP2pManager.ChannelListener, SharedPrefere
                 p2pManager.requestGroupInfo(channel, {
                     when {
                         it == null -> doStart()
-                        it.isGroupOwner -> doStart(it)
+                        it.isGroupOwner -> if (routingManager == null) doStart(it)
                         else -> {
-                            Log.i(TAG, "Removing old group ($it)")
+                            Crashlytics.log(Log.INFO, TAG, "Removing old group ($it)")
                             p2pManager.removeGroup(channel, object : WifiP2pManager.ActionListener {
                                 override fun onSuccess() = doStart()
                                 override fun onFailure(reason: Int) {
@@ -220,6 +232,7 @@ class RepeaterService : Service(), WifiP2pManager.ChannelListener, SharedPrefere
      */
     private fun doStart(group: WifiP2pGroup, ownerAddress: InetAddress? = null) {
         this.group = group
+        check(routingManager == null)
         routingManager = LocalOnlyInterfaceManager(group.`interface`!!, ownerAddress)
         status = Status.ACTIVE
         showNotification(group)
